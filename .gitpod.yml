@@ -19,7 +19,6 @@ tasks:
       bash database.sh &&
       python docs/assets/greeting.py back
   - command: >
-      npm install &&
       python docs/assets/greeting.py front
     openMode: split-right
 
