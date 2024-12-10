@@ -11,7 +11,11 @@ class User(db.Model):
     email = db.Column(db.String, unique=True, nullable=False)
     password = db.Column(db.String, nullable=False)
 
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
+    
     campaigns = db.relationship('Campaign', back_populates='user')
+    role = db.relationship('Role', back_populates='users')
+
 
     def __repr__(self):
         return '<User %r>' % self.email
@@ -25,6 +29,26 @@ class User(db.Model):
             "campaigns": [campaign.serialize() for campaign in self.campaigns]
             # do not serialize the password, its a security breach
         }
+
+class Role(db.Model):
+    __tablename__ = 'role'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, unique=True, nullable=False)
+    description = db.Column(db.String, nullable=False)
+
+    users = db.relationship('User', back_populates='role')
+
+    def __repr__(self):
+        return '<Role %r>' % self.name
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "users": [user.serialize() for user in self.users]
+        }
+
 
 location_campaign = db.Table(
     "location_campaign",
@@ -48,13 +72,13 @@ class Campaign(db.Model):
     user = db.relationship('User', back_populates='campaigns')
     project = db.relationship('Project', back_populates='campaigns')
     platform = db.relationship('Platform', back_populates='campaigns')
-    weekly_data = db.relationship('WeeklyData', back_populates='campaign')
+    weekly_data = db.relationship('WeeklyData', back_populates='campaign') #
     locations = db.relationship('Location', secondary=location_campaign, back_populates='campaigns')
 
     def __repr__(self):
         return '<Campaign %r>' % self.name
         
-    def serialialize(self):
+    def serialize(self):
         return {
             "id": self.id,
             "name": self.name,
@@ -126,7 +150,7 @@ class WeeklyData(db.Model):
     conversions = db.Column(db.Integer, nullable=False)
 
     campaign_id = db.Column(db.Integer, db.ForeignKey('campaign.id'), nullable=False)
-    campaign = db.relationship('Campaign', back_populates='weekly_data')
+    campaign = db.relationship('Campaign', back_populates='weekly_data') #
 
     def serialize(self):
         return {

@@ -2,32 +2,50 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 from flask import Flask, request, jsonify, url_for, Blueprint
-from api.models import db, User, Campaign, Location, WeeklyData, Project, Platform
+from api.models import db, User, Role, Campaign, Location, WeeklyData, Project, Platform
 from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
-from flask_jwt_extended import create_access_token
-from flask_jwt_extended import get_jwt_identity
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from datetime import datetime
+import hashlib
 
 api = Blueprint('api', __name__)
 
 # Allow CORS requests to this API
 CORS(api)
 
+def hash_password(password):
+    """Hashes a password using SHA-256."""
+
+    # Create a SHA-256 hash object
+    hasher = hashlib.sha256()
+
+    # Encode the password as bytes and update the hash object
+    hasher.update(password.encode('utf-8'))
+
+    # Get the hexadecimal representation of the hash
+    hashed_password = hasher.hexdigest()
+
+    return hashed_password
+    
 @api.route("/signup", methods=["POST"])
 def signup():
     first_name = request.json.get("first_name")
     last_name = request.json.get("last_name")
     email = request.json.get("email")
-    password = request.json.get("password")
-    if None in [email, password, first_name, last_name]:
+    role_id = request.json.get("role_id")
+    if None in [email, role_id, first_name, last_name]:
         return jsonify ({"msg": "Some required fields are missing"}), 400
-
     verify_email = User.query.filter_by(email=email).first()
     if verify_email:
         return jsonify ({"msg": "An account with this email already exists"}), 409
-
-    user = User(email=email, password=password, first_name=first_name, last_name=last_name)
+    verify_role = Role.query.filter_by(id=role_id).first()
+    if verify_role is None:
+        return jsonify ({"msg": "Role not found"}), 404
+        
+    current_year = datetime.now().year
+    password = last_name[:3] + first_name[:3] + str(current_year)  
+    user = User(email=email,role_id=role_id, password=hash_password(password), first_name=first_name, last_name=last_name)
 
     db.session.add(user)
     db.session.commit()
@@ -38,6 +56,7 @@ def signup():
     }
 
     return jsonify(response_body), 201
+
 
 
 
@@ -79,9 +98,12 @@ def login():
     if None in [email, password]:
         return jsonify("Some required fields are missing")
 
-    user = User.query.filter_by(email=email, password=password).first()
+    user = User.query.filter_by(email=email).first()
     if not user:
-        return jsonify("Incorrect credentials"), 401
+        return jsonify("Account with this email does not exist"), 404
+
+    if user.password != hash_password(password):
+        return jsonify("Incorrect password"), 401
 
     access_token = create_access_token(identity=user.id)
     print(access_token)
@@ -100,6 +122,16 @@ def get_user():
 
     response_body = {
         "msg": "Hello, this is your GET /user response "
+    }
+
+    return jsonify(response_body), 200
+
+@api.route("/roles", methods=["GET"])
+def get_roles():
+    roles = Role.query.all()
+
+    response_body = {
+        "roles": [role.serialize() for role in roles]
     }
 
     return jsonify(response_body), 200
