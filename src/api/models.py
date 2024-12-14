@@ -26,7 +26,8 @@ class User(db.Model):
             "first_name": self.first_name,
             "last_name": self.last_name,           
             "email": self.email,
-            "campaigns": [campaign.serialize() for campaign in self.campaigns]
+            "campaigns": [campaign.serialize() for campaign in self.campaigns],
+            "role": self.role.serialize()
             # do not serialize the password, its a security breach
         }
 
@@ -46,7 +47,6 @@ class Role(db.Model):
             "id": self.id,
             "name": self.name,
             "description": self.description,
-            "users": [user.serialize() for user in self.users]
         }
 
 

@@ -44,7 +44,7 @@ def signup():
         return jsonify ({"msg": "Role not found"}), 404
         
     current_year = datetime.now().year
-    password = last_name[:3] + first_name[:3] + str(current_year)  
+    password = last_name[:3].lower() + first_name[:3].lower() + str(current_year)  
     user = User(email=email,role_id=role_id, password=hash_password(password), first_name=first_name, last_name=last_name)
 
     db.session.add(user)
